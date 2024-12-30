@@ -9,20 +9,11 @@ import (
 )
 
 func main() {
-	// Directories for input and output
 	inputDir := "./txt"
 	outputDir := "./output"
-
-	// Ensure output directory exists
 	createOutputDir(outputDir)
-
-	// Copy CSS file to the output directory
 	copyCSSFile(outputDir)
-
-	// Process .txt files and generate HTML files
 	htmlFiles := processTxtFiles(inputDir, outputDir)
-
-	// Generate the index.html
 	generateIndex(outputDir, htmlFiles)
 
 	fmt.Println("Site generation complete!")
