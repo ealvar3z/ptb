@@ -13,7 +13,7 @@ it from there.
 touch txt/loren-ipsum.txt
 ed !$
 # write some distracted free prose
-\.
+.
 wq
 go run main.go
 ```
