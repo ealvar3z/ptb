@@ -1,0 +1,55 @@
+
+/* Center the entire page */
+body {
+    font-family: monospace;
+    background-color: #000;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+/* Main content container */
+.container {
+    max-width: 79ch;
+    width: calc(100% - 40px);
+    padding: 20px;
+    border: 1px solid #444;
+    background-color: #111;
+    text-align: left;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Title styling */
+h1 {
+    font-size: 1.5em;
+    text-align: center;
+    margin: 0 0 20px;
+}
+
+/* Content block styling */
+pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* Footer styling */
+footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+a {
+    color: #ccc;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
