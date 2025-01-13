@@ -70,6 +70,11 @@ h1 {
     margin: 0 0 20px;
 }
 
+h1 b {
+	color: 	#4caf50; /* green */
+	font-weight: bold;
+}
+
 /* Content block styling */
 pre {
     white-space: pre-wrap;
