@@ -5,16 +5,27 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"time"
 )
+
+type BlogPost struct {
+	Filename string		// Name of the HTML file
+	Title string		// Title of the blog post
+	Timestamp time.Time	// Creation or mod time of the file
+}
 
 func main() {
 	inputDir := "./txt"
 	outputDir := "./output"
 	createOutputDir(outputDir)
 	copyCSSFile(outputDir)
-	htmlFiles := processTxtFiles(inputDir, outputDir)
-	generateIndex(outputDir, htmlFiles)
+
+	posts := processTxtFiles(inputDir, outputDir)
+	sortPostsByDate(posts)
+
+	generateIndex(outputDir, posts)
 
 	fmt.Println("Site generation complete!")
 }
@@ -91,21 +102,34 @@ a:hover {
 }
 
 // processTxtFiles processes all .txt files in the input directory
-func processTxtFiles(inputDir, outputDir string) []string {
+// and returns a list of blog posts
+func processTxtFiles(inputDir, outputDir string) []BlogPost {
 	entries, err := os.ReadDir(inputDir)
 	if err != nil {
 		log.Fatalf("Failed to read input directory: %v", err)
 	}
 
-	var htmlFiles []string
+	var posts []BlogPost
 	for _, entry := range entries {
 		if !entry.IsDir() && isTxtFile(entry.Name()) {
 			fmt.Printf("Processing: %s\n", entry.Name())
-			outputFile := processFile(filepath.Join(inputDir, entry.Name()), outputDir)
-			htmlFiles = append(htmlFiles, filepath.Base(outputFile))
+			filePath := filepath.Join(inputDir, entry.Name())
+			info, err := os.Stat(filePath)
+			if err != nil {
+				log.Printf("Failed to get file info for %s: %v\n",
+				entry.Name(), err)
+				continue
+			}
+			outputFile := processFile(filePath, outputDir)
+			post := BlogPost{
+				Filename: filepath.Base(outputFile),
+				Title: strings.TrimSuffix(entry.Name(), ".txt"),
+				Timestamp: info.ModTime(),
+			}
+			posts = append(posts, post)
 		}
 	}
-	return htmlFiles
+	return posts
 }
 
 // isTxtFile checks if a file has a .txt extension
@@ -115,7 +139,6 @@ func isTxtFile(filename string) bool {
 
 // processFile reads a .txt file, generates HTML, and writes it to the output directory
 func processFile(inputFilePath, outputDir string) string {
-	// Read file content
 	content, err := os.ReadFile(inputFilePath)
 	if err != nil {
 		log.Printf("Failed to read file %s: %v\n", inputFilePath, err)
@@ -127,9 +150,8 @@ func processFile(inputFilePath, outputDir string) string {
 	title := strings.TrimSuffix(file, ".txt")
 	outputFilePath := filepath.Join(outputDir, strings.TrimSuffix(file, ".txt")+".html")
 	htmlContent := generateHTML(string(content), title)
-
-	// Write HTML to the output directory
 	writeOutputFile(outputFilePath, htmlContent)
+
 	return outputFilePath
 }
 
@@ -162,12 +184,25 @@ func generateHTML(content, title string) string {
 </html>`, title, title, content)
 }
 
+//sortPostsByDate sorts the blog posts by their creation
+// or modified time
+func sortPostsByDate(posts []BlogPost) {
+	sort.Slice(posts, func(i, j int) bool {
+		return posts[i].Timestamp.After(posts[j].Timestamp)
+	})
+}
+
 // generateIndex generates the index.html file
-func generateIndex(outputDir string, files []string) {
+// w/ blog posts sorted by date
+func generateIndex(outputDir string, posts []BlogPost) {
 	var links string
-	for _, file := range files {
-		title := strings.TrimSuffix(filepath.Base(file), ".html")
-		links += fmt.Sprintf(`<li><a href="%s">%s</a></li>`, file, title)
+	for _, post := range posts {
+		links += fmt.Sprintf(
+			`<li><a href="%s">%s</a> - %s</li>`, 
+			post.Filename,
+			post.Title,
+			post.Timestamp.Format("2006-01-02 15:04:05"),
+		)
 	}
 
 	indexContent := fmt.Sprintf(`<!DOCTYPE html>
