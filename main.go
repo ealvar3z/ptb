@@ -214,7 +214,7 @@ func generateIndex(outputDir string, posts []BlogPost) {
 </head>
 <body>
     <div class="container">
-        <h1>Plaintext Blog</h1>
+        <h1><b>[P]</b>lain <b>[T]</b>ext <b>[B]</b>log</h1>
         <ul>
             %s
         </ul>
