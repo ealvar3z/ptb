@@ -219,7 +219,7 @@ func generateIndex(outputDir string, posts []BlogPost) {
 </head>
 <body>
     <div class="container">
-        <h1><b>[P]</b>lain <b>[T]</b>ext <b>[B]</b>log || [PTB]</h1>
+        <h1><b>[P]</b>lain <b>[T]</b>ext <b>[B]</b>log || <b>[PTB]</b></h1>
         <ul>
             %s
         </ul>
