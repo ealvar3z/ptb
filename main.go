@@ -1,8 +1,8 @@
 package main
 
 import (
-	"html/template"
 	"fmt"
+	"html/template"
 	"log"
 	"os"
 	"os/exec"
@@ -108,11 +108,11 @@ func isTxtFile(filename string) bool {
 }
 
 func determineTimestamp(filePath string) (time.Time, error) {
-	args := []string{"log", "--follow", "--diff-filter=A",  "--format=%aI", filePath}
+	args := []string{"log", "--follow", "--diff-filter=A", "--format=%aI", filePath}
 	cmd := exec.Command("git", args...)
 	output, err := cmd.Output()
-	if err != nil { 
-		return time.Time{}, err 
+	if err != nil {
+		return time.Time{}, err
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
@@ -132,44 +132,14 @@ func processFile(inputFilePath, outputDir string) string {
 	title := strings.TrimSuffix(file, ".txt")
 	outputFilePath := filepath.Join(outputDir, title+".html")
 	outputFile, err := os.Create(outputFilePath)
-	if err != nil { 
+	if err != nil {
 		log.Printf("Failed to create output file %s: %v", outputFilePath, err)
 		return ""
 	}
 	defer outputFile.Close()
 	postTemplate.Execute(outputFile, map[string]string{"Title": title, "Content": string(content)})
-// 	htmlContent := generateHTML(string(content), title)
-// 	writeOutputFile(outputFilePath, htmlContent)
 	return outputFilePath
 }
-
-// func writeOutputFile(filePath, content string) {
-// 	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
-// 		log.Printf("Failed to write file %s: %v", filePath, err)
-// 	}
-// }
-// 
-// func generateHTML(content, title string) string {
-// 	return fmt.Sprintf(`<!DOCTYPE html>
-// <html lang="en">
-// <head>
-//     <meta charset="UTF-8">
-// 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-//     <title>%s</title>
-//     <link rel="stylesheet" href="style.css">
-// </head>
-// <body>
-//     <div class="container">
-//         <h1>%s</h1>
-//         <pre>%s</pre>
-//         <footer>
-//             <p>&copy; 2024 eax. All rights reserved.</p>
-//             <p><a href="index.html">Back to Index</a></p>
-//         </footer>
-//     </div>
-// </body>
-// </html>`, title, title, content)
-// }
 
 func sortPostsByDate(posts []BlogPost) {
 	sort.Slice(posts, func(i, j int) bool {
@@ -177,45 +147,12 @@ func sortPostsByDate(posts []BlogPost) {
 	})
 }
 
-// func generateIndex(outputDir string, posts []BlogPost) {
-// 	var links string
-// 	for _, post := range posts {
-// 		links += fmt.Sprintf(`<li><a href="%s">%s</a> - %s</li>`,
-// 			post.Filename,
-// 			post.Title,
-// 			post.Timestamp.Format("2006-01-02 15:04:05"))
-// 	}
-// 	indexContent := fmt.Sprintf(`<!DOCTYPE html>
-// <html lang="en">
-// <head>
-//     <meta charset="UTF-8">
-// 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-//     <title>Index</title>
-//     <link rel="stylesheet" href="style.css">
-// </head>
-// <body>
-//     <div class="container">
-//         <h1><b>[P]</b>lain <b>[T]</b>ext <b>[B]</b>log</h1>
-//         <ul>
-//             %s
-//         </ul>
-//         <footer>
-//             <p>&copy; 2024 eax. All rights reserved.</p>
-//         </footer>
-//     </div>
-// </body>
-// </html>`, links)
-// 	indexFile := filepath.Join(outputDir, "index.html")
-// 	if err := os.WriteFile(indexFile, []byte(indexContent), 0644); err != nil {
-// 		log.Fatalf("Failed to write index.html: %v", err)
-// 	}
-// }
-
 func generateIndex(outputDir string, posts []BlogPost) {
 	indexFile := filepath.Join(outputDir, "index.html")
 	outputFile, err := os.Create(indexFile)
-	if err != nil { log.Fatalf("Failed to write index.html: %v", err) }
+	if err != nil {
+		log.Fatalf("Failed to write index.html: %v", err)
+	}
 	defer outputFile.Close()
 	indexTemplate.Execute(outputFile, posts)
 }
-
