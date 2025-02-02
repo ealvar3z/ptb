@@ -116,10 +116,13 @@ func determineTimestamp(filePath string) (time.Time, error) {
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	if len(lines) > 0 {
-		return time.Parse(time.RFC3339, lines[len(lines)-1])
-	}
-	return time.Time{}, nil
+// 	o, _ := time.Parse(time.RFC3339, lines[len(lines)-1])
+// 	d := strings.Fields(string(o))
+// 	fmt.Printf("lines: %s\n", d)
+// 	if len(lines) > 0 {
+	return time.Parse(time.RFC3339, lines[len(lines)-1])
+// 	}
+// 	return time.Time{}, nil
 }
 
 func processFile(inputFilePath, outputDir string) string {
