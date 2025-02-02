@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -86,7 +87,10 @@ func processTxtFiles(inputDir, outputDir string) []BlogPost {
 		if !entry.IsDir() && isTxtFile(entry.Name()) {
 			fmt.Printf("Processing: %s\n", entry.Name())
 			filePath := filepath.Join(inputDir, entry.Name())
-			timestamp := determineTimestamp(filePath)
+			timestamp, err := determineTimestamp(filePath)
+			if err != nil {
+				log.Fatalf("Failed to get timestamp: %v", err)
+			}
 			outputFile := processFile(filePath, outputDir)
 			post := BlogPost{
 				Filename:  filepath.Base(outputFile),
@@ -103,13 +107,19 @@ func isTxtFile(filename string) bool {
 	return strings.HasSuffix(filename, ".txt")
 }
 
-func determineTimestamp(filePath string) time.Time {
-	info, err := os.Stat(filePath)
-	if err != nil {
-		log.Printf("Failed to get file info for %s: %v", filePath, err)
-		return time.Now()
+func determineTimestamp(filePath string) (time.Time, error) {
+	args := []string{"log", "--follow", "--diff-filter=A",  "--format=%aI", filePath}
+	cmd := exec.Command("git", args...)
+	output, err := cmd.Output()
+	if err != nil { 
+		return time.Time{}, err 
 	}
-	return info.ModTime()
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	if len(lines) > 0 {
+		return time.Parse(time.RFC3339, lines[len(lines)-1])
+	}
+	return time.Time{}, nil
 }
 
 func processFile(inputFilePath, outputDir string) string {
