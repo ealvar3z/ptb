@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -16,6 +15,7 @@ type BlogPost struct {
 	Filename  string
 	Title     string
 	Timestamp time.Time
+	Content   string
 }
 
 var postTemplate = template.Must(template.New("post").Parse(`<!DOCTYPE html>
@@ -87,16 +87,10 @@ func processTxtFiles(inputDir, outputDir string) []BlogPost {
 		if !entry.IsDir() && isTxtFile(entry.Name()) {
 			fmt.Printf("Processing: %s\n", entry.Name())
 			filePath := filepath.Join(inputDir, entry.Name())
-			timestamp, err := determineTimestamp(filePath)
-			if err != nil {
-				log.Fatalf("Failed to get timestamp: %v", err)
-			}
-			outputFile := processFile(filePath, outputDir)
-			post := BlogPost{
-				Filename:  filepath.Base(outputFile),
-				Title:     strings.TrimSuffix(entry.Name(), ".txt"),
-				Timestamp: timestamp,
-			}
+			post := parseFilename(filePath)
+			post.Content = readFileContent(filePath)
+			post.Filename = post.Title + ".html"
+			processFile(&post, outputDir)
 			posts = append(posts, post)
 		}
 	}
@@ -107,41 +101,38 @@ func isTxtFile(filename string) bool {
 	return strings.HasSuffix(filename, ".txt")
 }
 
-func determineTimestamp(filePath string) (time.Time, error) {
-	args := []string{"log", "--follow", "--diff-filter=A", "--format=%aI", filePath}
-	cmd := exec.Command("git", args...)
-	output, err := cmd.Output()
-	if err != nil {
-		return time.Time{}, err
-	}
+func parseFilename(filePath string) BlogPost {
+	filename := filepath.Base(filePath)
+	filename = strings.TrimSuffix(filename, ".txt")
+	parts := strings.SplitN(filename, "_", 2)
 
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-// 	o, _ := time.Parse(time.RFC3339, lines[len(lines)-1])
-// 	d := strings.Fields(string(o))
-// 	fmt.Printf("lines: %s\n", d)
-// 	if len(lines) > 0 {
-	return time.Parse(time.RFC3339, lines[len(lines)-1])
-// 	}
-// 	return time.Time{}, nil
+	if len(parts) < 2 { log.Fatalf("Invalid filename format: %s", filename) }
+
+	timestamp, err := time.Parse("20060102", parts[0])
+	if err != nil { log.Fatalf("Failed to parse date from filename: %s", filename) }
+
+	title := parts[1]
+	return BlogPost{
+		Title: title,
+		Timestamp: timestamp,
+	}
 }
 
-func processFile(inputFilePath, outputDir string) string {
-	content, err := os.ReadFile(inputFilePath)
-	if err != nil {
-		log.Printf("Failed to read file %s: %v", inputFilePath, err)
-		return ""
-	}
-	file := filepath.Base(inputFilePath)
-	title := strings.TrimSuffix(file, ".txt")
-	outputFilePath := filepath.Join(outputDir, title+".html")
+func readFileContent(filePath string) string {
+	content, err := os.ReadFile(filePath)
+	if err != nil { log.Fatalf("Failed to read file %s: %v", filePath, err) }
+
+	return string(content)
+}
+
+func processFile(post *BlogPost, outputDir string) {
+	outputFilePath := filepath.Join(outputDir, post.Filename)
 	outputFile, err := os.Create(outputFilePath)
-	if err != nil {
-		log.Printf("Failed to create output file %s: %v", outputFilePath, err)
-		return ""
-	}
+	if err != nil { log.Fatalf("Failed to create output file %s: %v", post.Filename, err) }
 	defer outputFile.Close()
-	postTemplate.Execute(outputFile, map[string]string{"Title": title, "Content": string(content)})
-	return outputFilePath
+	
+	postTemplate.Execute(outputFile, post)
+	post.Filename = post.Filename // TODO: hacky way to ensure proper filename (gotta fix this)
 }
 
 func sortPostsByDate(posts []BlogPost) {
@@ -153,9 +144,8 @@ func sortPostsByDate(posts []BlogPost) {
 func generateIndex(outputDir string, posts []BlogPost) {
 	indexFile := filepath.Join(outputDir, "index.html")
 	outputFile, err := os.Create(indexFile)
-	if err != nil {
-		log.Fatalf("Failed to write index.html: %v", err)
-	}
+	if err != nil { log.Fatalf("Failed to write index.html: %v", err) }
 	defer outputFile.Close()
+
 	indexTemplate.Execute(outputFile, posts)
 }
