@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>lisp-ii</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>lisp-ii</h1>
+        <pre>LISP (PART 2).
+
+In my last post, I left your with a thought experiment: how do Lisp, C and
+Fortran embody the UNIX philosophy, but in different dimensions? If you&#39;ve
+been pondering this, let me help you.
+
+At its core, the UNIX philosophy can be steeped down to:
+
+  * do one thing well.  
+  * compose small tools into larger systems.  
+  * text is a universal interface.
+
+It&#39;s a philosophy of simplicity, modularity, and extensibility. Yet, when we
+look at Lisp, C and Fortran (three languages w/ very different fundamental
+units of data); they all reflect the UNIX philosophy in their own unique way. I
+posit the following:
+
+  * C is       -&gt; UNIX in the systems dimension.
+  * Fortran is -&gt; UNIX in the computational dimension.
+  * Lisp is    -&gt; UNIX in the abstract dimension.  
+
+Once one realizes that each of these programming languages forces the
+programmer to think in these dimensions, the rest simply follows. For example,
+Lisp is built on S-expressions. It&#39;s &#34;small tool&#34; are its atomic forms: `car`,
+`cdr`, `cons`, and `lambda`. Due to this level of simplicity, one is allowed to
+compose complex abstractions from these primitives. As in UNIX pipes, Lisp
+thrives in composition via macros, functions, and higher-order functions (same
+applies to functional paradigms). In other words:
+
+  * macros                  -&gt; generate hygienic code
+  * functions               -&gt; manipulate lists
+  * higher-order-functions  -&gt; extend behavior
+
+Therefore, Lisp embodies UNIX in the abstract, self-referential way, i.e.
+programs that manipulate programs, infinitely extensible through its own
+structures. As such, it makes sense, as to why Lisp projects are &#34;monolithic&#34;
+in architecture, because to me Lisp is biological, and nature always
+self-organizes in emerging complex systems. One can see an example of this in
+Emacs: an entire Lisp ecosystem built around a text editor.
+
+I&#39;ll leave you with this: if the UNIX philosophy is so universal, what other
+dimensions do you see it manifesting in? Perhaps we&#39;ll explore that next time.
+
+- Mata ne!
+</pre>
+        <footer>
+            <p>&copy; 2024 eax. All rights reserved.</p>
+            <p><a href="index.html">Back to Index</a></p>
+        </footer>
+    </div>
+</body>
+</html>
