@@ -32,7 +32,10 @@ var postTemplate = template.Must(template.New("post").Parse(`<!DOCTYPE html>
         <pre>{{.Content}}</pre>
         <footer>
             <p>&copy; 2024 eax. All rights reserved.</p>
-            <p><a href="index.html">Back to Index</a></p>
+            <p>
+		<a href="index.html">Back to Index</a> |
+		<a href="https://github.com/ealvar3z/ptb/issues" target="_blank">Comments</a>
+	    </p>
         </footer>
     </div>
 </body>
@@ -106,21 +109,27 @@ func parseFilename(filePath string) BlogPost {
 	filename = strings.TrimSuffix(filename, ".txt")
 	parts := strings.SplitN(filename, "_", 2)
 
-	if len(parts) < 2 { log.Fatalf("Invalid filename format: %s", filename) }
+	if len(parts) < 2 {
+		log.Fatalf("Invalid filename format: %s", filename)
+	}
 
 	timestamp, err := time.Parse("20060102", parts[0])
-	if err != nil { log.Fatalf("Failed to parse date from filename: %s", filename) }
+	if err != nil {
+		log.Fatalf("Failed to parse date from filename: %s", filename)
+	}
 
 	title := parts[1]
 	return BlogPost{
-		Title: title,
+		Title:     title,
 		Timestamp: timestamp,
 	}
 }
 
 func readFileContent(filePath string) string {
 	content, err := os.ReadFile(filePath)
-	if err != nil { log.Fatalf("Failed to read file %s: %v", filePath, err) }
+	if err != nil {
+		log.Fatalf("Failed to read file %s: %v", filePath, err)
+	}
 
 	return string(content)
 }
@@ -128,9 +137,11 @@ func readFileContent(filePath string) string {
 func processFile(post *BlogPost, outputDir string) {
 	outputFilePath := filepath.Join(outputDir, post.Filename)
 	outputFile, err := os.Create(outputFilePath)
-	if err != nil { log.Fatalf("Failed to create output file %s: %v", post.Filename, err) }
+	if err != nil {
+		log.Fatalf("Failed to create output file %s: %v", post.Filename, err)
+	}
 	defer outputFile.Close()
-	
+
 	postTemplate.Execute(outputFile, post)
 	post.Filename = post.Filename // TODO: hacky way to ensure proper filename (gotta fix this)
 }
@@ -144,7 +155,9 @@ func sortPostsByDate(posts []BlogPost) {
 func generateIndex(outputDir string, posts []BlogPost) {
 	indexFile := filepath.Join(outputDir, "index.html")
 	outputFile, err := os.Create(indexFile)
-	if err != nil { log.Fatalf("Failed to write index.html: %v", err) }
+	if err != nil {
+		log.Fatalf("Failed to write index.html: %v", err)
+	}
 	defer outputFile.Close()
 
 	indexTemplate.Execute(outputFile, posts)
