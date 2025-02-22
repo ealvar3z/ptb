@@ -1,0 +1,44 @@
+LISP (PART 2).
+
+In my last post, I left your with a thought experiment: how do Lisp, C and
+Fortran embody the UNIX philosophy, but in different dimensions? If you've
+been pondering this, let me help you.
+
+At its core, the UNIX philosophy can be steeped down to:
+
+  * do one thing well.  
+  * compose small tools into larger systems.  
+  * text is a universal interface.
+
+It's a philosophy of simplicity, modularity, and extensibility. Yet, when we
+look at Lisp, C and Fortran (three languages w/ very different fundamental
+units of data); they all reflect the UNIX philosophy in their own unique way. I
+posit the following:
+
+  * C is       -> UNIX in the systems dimension.
+  * Fortran is -> UNIX in the computational dimension.
+  * Lisp is    -> UNIX in the abstract dimension.  
+
+Once one realizes that each of these programming languages forces the
+programmer to think in these dimensions, the rest simply follows. For example,
+Lisp is built on S-expressions. It's "small tool" are its atomic forms: `car`,
+`cdr`, `cons`, and `lambda`. Due to this level of simplicity, one is allowed to
+compose complex abstractions from these primitives. As in UNIX pipes, Lisp
+thrives in composition via macros, functions, and higher-order functions (same
+applies to functional paradigms). In other words:
+
+  * macros                  -> generate hygienic code
+  * functions               -> manipulate lists
+  * higher-order-functions  -> extend behavior
+
+Therefore, Lisp embodies UNIX in the abstract, self-referential way, i.e.
+programs that manipulate programs, infinitely extensible through its own
+structures. As such, it makes sense, as to why Lisp projects are "monolithic"
+in architecture, because to me Lisp is biological, and nature always
+self-organizes in emerging complex systems. One can see an example of this in
+Emacs: an entire Lisp ecosystem built around a text editor.
+
+I'll leave you with this: if the UNIX philosophy is so universal, what other
+dimensions do you see it manifesting in? Perhaps we'll explore that next time.
+
+- Mata ne!
