@@ -19,9 +19,7 @@ type BlogPost struct {
 }
 
 var postTemplate = template.Must(template.New("post").Funcs(template.FuncMap{
-	"urlquery": func(s string) string {
-		return template.URLQueryEscaper(s)
-	},
+	"urlquery": template.URLQueryEscaper,
 }).Parse(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -36,9 +34,10 @@ var postTemplate = template.Must(template.New("post").Funcs(template.FuncMap{
         <pre>{{.Content}}</pre>
         <footer>
             <p>&copy; 2024 eax. All rights reserved.</p>
+	    {{ $formattedDate := .Timestamp.Format "2006-01-02" }}
             <p>
 		<a href="index.html">Back to Index</a> |
-		<a href="https://github.com/ealvar3z/ptb/issues/new?title={{.Title | urlquery}}&body={{printf "Comments for the post: %s (published on %s)" .Title.Timestamp.Format "2006-01-02" | urlquery}}" target="_blank">Comments</a>
+		<a href="https://github.com/ealvar3z/ptb/issues/new?title={{.Title | urlquery}}&body={{printf "Comments for the post: %s (published on %s)" .Title $formattedDate | urlquery}}" target="_blank">Comments</a>
 	    </p>
         </footer>
     </div>
