@@ -1,0 +1,23 @@
+UNIX as an IDE.
+
+This title is a little bit misleading, as it is more about configuration and dotfiles hell more than anything else. To get a sense for the title of this post, I rather refer you to the article that inspired me to stay on the "path" <https://blog.sanctum.geek.nz/series/unix-as-ide/>.
+
+What I do want to get across however, is the experience I have had while forcing myself to live on the console for the past three months. To be succinct, here's a semi-visual:
+
+BEFORE				AFTER
+------				-----
+chromium			w3m
+vim				ed (1)
+evince				fbpdf
+tmux				screen
+weechat				senpai
+thunderbird			aerc
+
+The tools above are just a highlight of the main tools that I've replaced in support of this move to the console. Ali Grudi's fb{pad,term,et.al} suite makes all of this possible, as well as the gnu coreutils stack.
+
+BOTTOM LINE UP FRONT: The move to the console has been a joy.
+
+Given this experience, you may wonder if there are things I would change ... and the answer is yes. I am currently experimenting with leveraging the Emacs Operating System to bind the entire system together, as the platform offers everything under the sink. More to follow.
+
+- Mata ne!
+
