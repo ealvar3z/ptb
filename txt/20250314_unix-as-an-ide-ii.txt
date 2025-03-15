@@ -1,0 +1,27 @@
+UNIX as an IDE II.
+
+Last article, I've mentioned that I would report back after giving emacs a full
+rundown to serve as my computing environment. Therefore, this will be a very
+short blog post for reasons that the reader may be able to foretell.
+
+EMACS does stereotypically fulfill the operating system moniker. My experience
+you may ask? ... it was amazing. However ... as great as EMACS is and was for
+me, I still find myself goig back to:
+
+- ed -> sam -> vi 
+- sh/bash -> Perl/Python
+- C/Go -> Scheme/OCaml
+
+What I've learned is that one's computing environment has to both be enjoyable
+and productive. The productive part: EMACS covered it! The enjoyable part, not
+so much! Subjective reason: me!. Objective reason: none!.
+
+To re-iterate, it was not EMACS or the ecosystem, the community, _et al_.
+It was simple: me!!! As much as I love lisp, ocaml, and the hackability of
+EMACS; I have gotten so used to the simplicity of ed/sam/vi, that I find it
+hard to give up editing in anything else.
+
+In the end, the console only experience was a fresh of breath air, as I've
+eluded to already.
+
+- Mata ne!
