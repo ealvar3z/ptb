@@ -20,6 +20,9 @@ type BlogPost struct {
 
 var postTemplate = template.Must(template.New("post").Funcs(template.FuncMap{
 	"urlquery": template.URLQueryEscaper,
+	"safeHTML": func(s string) template.HTML {
+		return template.HTML(s)
+	},
 }).Parse(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,7 +34,7 @@ var postTemplate = template.Must(template.New("post").Funcs(template.FuncMap{
 <body>
     <div class="container">
         <h1>{{.Title}}</h1>
-        <pre>{{.Content}}</pre>
+        <pre>{{.Content | safeHTML}}</pre>
         <footer>
             <p>&copy; 2024 eax. All rights reserved.</p>
 	    {{ $formattedDate := .Timestamp.Format "2006-01-02" }}
