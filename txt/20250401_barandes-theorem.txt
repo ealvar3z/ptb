@@ -1,0 +1,60 @@
+STOCHASTIC-QUANTUM THEOREM.
+
+I was listening to the following <a href="https://youtu.be/3Ms4acb6SUY">YouTube video</a> the other day, which led me down an academic rabbit-hole: <a href="https://arxiv.org/pdf/2309.03085">Jacob Barandes' Stochastic-Quantum Theorem</a>. To appreciate his idea, we have to understand what stochastic systems are and how they differ from quantum systems (well, i had to). Using Wikipedia for the "mathy" stuff + GPT 4.5 Preview Research for a quick intuition regarding the math, I was able to integrate the paper quite nicely in my brain.
+
+A stochastic system is simply a system where the outcome is not certain. In other words, there are many possible paths, each with its own probability. For example, tossing a coin (50/50 chance) or stock market changes. These systems use probability to describe how things evolve over time; often modeled using <a href="https://en.wikipedia.org/w/index.php?title=Markov_chain&section=4">"transition probabilities" (i.e. Markov Chains)</a> to describe the chances of moving from one state to another. Simply put: *you cannot predict _what_ will happen, but you _can_ predict the odds!
+
+So, how do stochastic systems differ from quantum ones?
+
+Stochastic Systems:
+	- they are "messy"
+	- they can be irreversible (i.e. you can't run them backward)
+	- they include noise, unpredictability, or memory
+	- they usually don't conserve information
+
+Quantum Systems:
+	- they are smooth and reversible
+	- governed by wave functions & interference
+	- they conserver information (<a href="https://physics.stackexchange.com/questions/434883/what-is-meant-by-unitary-time-evolution">unitary evolution</a>)
+
+Which led me to ask: how could something as "structured" as quantum mechanics possibly explain something as chaotic as a random system (stochastic)? I'll let Barandes answer.
+
+Barandes' theorem states:
+
+	| Every stochastic system can be embedded inside a
+	| quantum system.
+
+In other words, what may look like randomness, may just be the visible part of a deeper, deterministic process happening in a larger, hidden space. Think of it a bit like Plato's Cave:
+
+	- you're watching shadows on a wall
+	- the shadows dance about randomly
+	- but you don't see the _actual_ 3D objects casting the shadows, which are rotating smoothly and predictably.
+
+What I think Barandes is saying is: the shadows (stochastic system) is just a slice of higher dimensional rotation (quantum system). I mentioned Plato's Cave because one of the key philosophical ideas in the allegory is that our senses only show us shadows of a deeper, more structured reality. But how does this work? The paper mentions an embedding idea.
+
+Avoiding all of the math gumbo. here's how embedding works (at least to me):
+
+	- you define your stochastic system (i.e: a list of states & the probabilities of jumping b/twn them)
+	- then you construct a quantum system with more dimensions and structure (i.e. the configuration)
+	- the stochastic behavior is just what you see when you look at only part of the larger, rotating system
+
+The rotation is the key: quantum systems evolve by _unitary transformations_, which are smooth rotations.Thus no information is lost. Everything is preserved. The randomness we see is due to only viewing a part of the system. This is a powerful intuition. Quantum systems are stable precisely due to how they evolve: by rotations. These rotations (unitary evolution) do not create or destroy anything, they just sort of shuffle things around. Therefore, Barandes' claim means:
+
+	- that, systems with noise, uncertainty or memory can be modeled by something _rotational underneath_
+	- randomness isn't the deepest layer. *Rotation is*
+
+This realization reminded me of my earlier endeavors while studying Physics. See, to me, the fundamental conclusion of Physics is structured around transformation. This paper highlights that even randomness "might" just be another rotation that we fully don't see.
+
+This opens the following possibility:
+
+	| Quantum gravity might not be about gluing randomness to
+	| geometry. It might be about recognizing that all systems
+	| are already geometric. They just appear random when we
+	| look at only one part of the picture.
+
+Barandes' Stochastic-Quantum Theorem doesn't just propose a new model of seeing the universe. It also tells us that the noisy world might just be a filtered view of a quiet, rotational truth underneath. By starting with familiar ideas like randomness and work towards the quantum world, we may begin to see that the chaotic surface could be a shadow of a deeper structure.
+
+In that structure, *rotation isn't just motion. It's the foundation of reality itself*.
+
+Mata ne!
+
