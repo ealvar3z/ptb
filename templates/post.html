@@ -1,0 +1,31 @@
+{{ define "post.html" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ .Title }}</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>{{ .Title }}</h1>
+    <pre>{{ .Content | safeHTML }}</pre>
+    <footer>
+      <p>&copy; 2024 eax. All rights reserved.</p>
+      {{ $d := .Timestamp.Format "2006-01-02" }}
+      <p>
+        <a href="index.html">Back to Index</a> |
+        <a href="https://github.com/ealvar3z/ptb/issues/new?
+            title={{ .Title | urlquery }}&
+            body={{ printf "Comments for the post: %s (published on %s)" .Title $d | urlquery }}"
+           target="_blank">
+          Comments
+        </a>
+      </p>
+    </footer>
+  </div>
+</body>
+</html>
+{{ end }}
+
