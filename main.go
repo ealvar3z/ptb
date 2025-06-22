@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"html/template"
 	"log"
@@ -11,6 +12,18 @@ import (
 	"time"
 )
 
+//go:embed templates/*.html
+var templateFS embed.FS
+
+var tmpl = template.Must(
+	template.New("").
+		Funcs(template.FuncMap{
+			"urlquery": template.URLQueryEscaper,
+			"safeHTML": func(s string) template.HTML { return template.HTML(s) },
+		}).
+		ParseFS(templateFS, "templates/*.html"),
+)
+
 type BlogPost struct {
 	Filename  string
 	Title     string
@@ -18,147 +31,82 @@ type BlogPost struct {
 	Content   string
 }
 
-var postTemplate = template.Must(template.New("post").Funcs(template.FuncMap{
-	"urlquery": template.URLQueryEscaper,
-	"safeHTML": func(s string) template.HTML {
-		return template.HTML(s)
-	},
-}).Parse(`<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.Title}}</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="container">
-        <h1>{{.Title}}</h1>
-        <pre>{{.Content | safeHTML}}</pre>
-        <footer>
-            <p>&copy; 2024 eax. All rights reserved.</p>
-	    {{ $formattedDate := .Timestamp.Format "2006-01-02" }}
-            <p>
-		<a href="index.html">Back to Index</a> |
-		<a href="https://github.com/ealvar3z/ptb/issues/new?title={{.Title | urlquery}}&body={{printf "Comments for the post: %s (published on %s)" .Title $formattedDate | urlquery}}" target="_blank">Comments</a>
-	    </p>
-        </footer>
-    </div>
-</body>
-</html>`))
-
-var indexTemplate = template.Must(template.New("index").Parse(`<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Index</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="container">
-        <h1><b>[P]</b>lain <b>[T]</b>ext <b>[B]</b>log</h1>
-        <ul>
-            {{range .}}
-            <li><a href="{{.Filename}}">{{.Title}}</a> - {{.Timestamp.Format "2006-01-02"}}</li>
-            {{end}}
-        </ul>
-        <footer>
-            <p>&copy; 2024 eax. All rights reserved.</p>
-        </footer>
-    </div>
-</body>
-</html>`))
-
 func main() {
 	inputDir := "./txt"
 	outputDir := "./output"
-	createOutputDir(outputDir)
-	posts := processTxtFiles(inputDir, outputDir)
-	sortPostsByDate(posts)
-	generateIndex(outputDir, posts)
+	ensureDir(outputDir)
+
+	posts := collectPosts(inputDir, outputDir)
+	sort.Slice(posts, func(i, j int) bool {
+		return posts[i].Timestamp.After(posts[j].Timestamp)
+	})
+	writeIndex(outputDir, posts)
 	fmt.Println("Site generation complete!")
 }
 
-func createOutputDir(outputDir string) {
-	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+func ensureDir(dir string) {
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		log.Fatalf("Failed to create output directory: %v", err)
 	}
 }
 
-func processTxtFiles(inputDir, outputDir string) []BlogPost {
+func collectPosts(inputDir, outputDir string) []BlogPost {
 	entries, err := os.ReadDir(inputDir)
 	if err != nil {
 		log.Fatalf("Failed to read input directory: %v", err)
 	}
 	var posts []BlogPost
-	for _, entry := range entries {
-		if !entry.IsDir() && isTxtFile(entry.Name()) {
-			fmt.Printf("Processing: %s\n", entry.Name())
-			filePath := filepath.Join(inputDir, entry.Name())
-			post := parseFilename(filePath)
-			post.Content = readFileContent(filePath)
-			post.Filename = post.Title + ".html"
-			processFile(&post, outputDir)
-			posts = append(posts, post)
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".txt") {
+			continue
 		}
+		src := filepath.Join(inputDir, e.Name())
+		post := parseFilename(src)
+		post.Content = mustReadFile(src)
+		post.Filename = post.Title + ".html"
+
+		writePost(outputDir, &post)
+		posts = append(posts, post)
 	}
 	return posts
 }
 
-func isTxtFile(filename string) bool {
-	return strings.HasSuffix(filename, ".txt")
-}
-
-func parseFilename(filePath string) BlogPost {
-	filename := filepath.Base(filePath)
-	filename = strings.TrimSuffix(filename, ".txt")
-	parts := strings.SplitN(filename, "_", 2)
-
+func parseFilename(path string) BlogPost {
+	base := strings.TrimSuffix(filepath.Base(path), ".txt")
+	parts := strings.SplitN(base, "_", 2)
 	if len(parts) < 2 {
-		log.Fatalf("Invalid filename format: %s", filename)
+		log.Fatalf("Invalid filename format: %s", base)
 	}
 
-	timestamp, err := time.Parse("20060102", parts[0])
+	ts, err := time.Parse("20060102", parts[0])
 	if err != nil {
-		log.Fatalf("Failed to parse date from filename: %s", filename)
+		log.Fatalf("Failed to parse date from filename: %s", base)
 	}
-
-	title := parts[1]
-	return BlogPost{
-		Title:     title,
-		Timestamp: timestamp,
-	}
+	return BlogPost{Title: parts[1], Timestamp: ts}
 }
 
-func readFileContent(filePath string) string {
-	content, err := os.ReadFile(filePath)
+func mustReadFile(path string) string {
+	b, err := os.ReadFile(path)
 	if err != nil {
-		log.Fatalf("Failed to read file %s: %v", filePath, err)
+		log.Fatalf("Reading %s: %v", path, err)
 	}
-
-	return string(content)
+	return string(b)
 }
 
-func processFile(post *BlogPost, outputDir string) {
-	outputFilePath := filepath.Join(outputDir, post.Filename)
-	outputFile, err := os.Create(outputFilePath)
+func writePost(outDir string, post *BlogPost) {
+	inputFile := filepath.Join(outDir, post.Filename)
+	outputFile, err := os.Create(inputFile)
 	if err != nil {
-		log.Fatalf("Failed to create output file %s: %v", post.Filename, err)
+		log.Fatalf("Creating %s: %v", inputFile, err)
 	}
 	defer outputFile.Close()
 
-	postTemplate.Execute(outputFile, post)
-	post.Filename = post.Filename // TODO: hacky way to ensure proper filename (gotta fix this)
+	if err := tmpl.ExecuteTemplate(outputFile, "post.html", post); err != nil {
+		log.Fatalf("Rendering post %s: %v", post.Title, err)
+	}
 }
 
-func sortPostsByDate(posts []BlogPost) {
-	sort.Slice(posts, func(i, j int) bool {
-		return posts[i].Timestamp.After(posts[j].Timestamp)
-	})
-}
-
-func generateIndex(outputDir string, posts []BlogPost) {
+func writeIndex(outputDir string, posts []BlogPost) {
 	indexFile := filepath.Join(outputDir, "index.html")
 	outputFile, err := os.Create(indexFile)
 	if err != nil {
@@ -166,5 +114,7 @@ func generateIndex(outputDir string, posts []BlogPost) {
 	}
 	defer outputFile.Close()
 
-	indexTemplate.Execute(outputFile, posts)
+	if err := tmpl.ExecuteTemplate(outputFile, "index.html", posts); err != nil {
+		log.Fatalf("Rendering index: %v", err)
+	}
 }
