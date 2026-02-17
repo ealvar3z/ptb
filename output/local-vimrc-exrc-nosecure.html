@@ -1,0 +1,71 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>local-vimrc-exrc-nosecure</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>local-vimrc-exrc-nosecure</h1>
+    <pre>LOCAL VIMRC, GLOBAL SANITY
+
+There is a quiet engineering problem most Vim users eventually run into:
+where should project-specific behavior live?
+
+If every tweak goes into your global vimrc, it turns into an uncurated junk
+drawer. If you avoid customization entirely, you lose speed and consistency
+inside projects that clearly benefit from local semantics.
+
+The combination of <code>set exrc</code> and <code>set nosecure</code> gives you
+an honest middle path.
+
+With <code>exrc</code>, Vim reads a local <code>.vimrc</code> from the working
+directory. That means project concerns stay in the project. A blog repo can
+have commands for post scaffolding. A Go service can have build/test mappings.
+A docs repo can have prose-friendly text settings. None of that needs to leak
+into your universal editing defaults.
+
+The payoff is immediate:
+
+- a lean global vimrc that remains understandable months later;
+- faster onboarding when you return to old repositories;
+- fewer accidental keymap collisions between unrelated domains;
+- configuration that documents project intent in a practical way.
+
+In short, local config is not about being clever. It is about reducing mental
+load. Every repository can carry only the behaviors that make sense for that
+repository.
+
+For this blog, that can include things like a <code>:NewPost</code> command
+that creates files using <code>YYYYMMDD_slug.txt</code>, plus insert helpers for
+HTML anchors like <code>&lt;a href=""&gt;&lt;/a&gt;</code>. That is exactly the
+kind of ergonomics you want nearby, not globally active while editing unrelated
+code.
+
+There is, however, one rule that matters more than convenience: trust boundary.
+A local vimrc is executable configuration. If you enable this workflow, you
+should do it only for repositories you trust and understand.
+
+Used responsibly, local vimrc via <code>exrc</code> and <code>nosecure</code>
+is one of the cleanest ways to keep your editor sharp: stable global defaults,
+local project power, and no permanent clutter.
+</pre>
+    <footer>
+      <p>&copy; 2024 eax. All rights reserved.</p>
+      
+      <p>
+        <a href="index.html">Back to Index</a> |
+        <a href="https://github.com/ealvar3z/ptb/issues/new?
+            title=local-vimrc-exrc-nosecure&
+            body=Comments&#43;for&#43;the&#43;post%3A&#43;local-vimrc-exrc-nosecure&#43;%28published&#43;on&#43;2026-02-17%29"
+           target="_blank">
+          Comments
+        </a>
+      </p>
+    </footer>
+  </div>
+</body>
+</html>

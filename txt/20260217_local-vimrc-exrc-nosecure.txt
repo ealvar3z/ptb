@@ -1,0 +1,39 @@
+LOCAL VIMRC, GLOBAL SANITY
+
+There is a quiet engineering problem most Vim users eventually run into:
+where should project-specific behavior live?
+
+If every tweak goes into your global vimrc, it turns into an uncurated junk
+drawer. If you avoid customization entirely, you lose speed and consistency
+inside projects that clearly benefit from local semantics.
+
+The combination of `set exrc` and `set nosecure` gives you an honest middle
+path. That means project concerns stay in the project. A blog repo can have
+commands for post scaffolding. A Go service can have build/test mappings.  A
+docs repo can have prose-friendly text settings. None of that needs to leak
+into your universal editing defaults.
+
+The payoff is immediate:
+
+- a lean global vimrc that remains understandable months later;
+- faster onboarding when you return to old repositories;
+- fewer accidental keymap collisions between unrelated domains;
+- configuration that documents project intent in a practical way.
+
+In short, a local vim config is not only clever, it reduces mental load. With
+this approach, every repository can carry only the behaviors that make sense
+for that repository.
+
+For example, this blog has one: it includes things like a `:NewPost` command
+that creates files using my desired slug format (YYYYMMDD_slug.txt), plus
+insert helpers for HTML markup. This is exactly the kind of ergonomics you
+want nearby, not globally active while editing unrelated code.
+
+There is, however, one rule that matters more than convenience: trust
+boundary.  A local vimrc is executable configuration. If you enable this
+workflow, you should do it only for repositories you trust and understand. See
+<a href="https://vimhelp.org/starting.txt.html#trojan-horse">Trojan Horse</a>
+
+Used responsibly, local vimrc via `exrc` and `nosecure` is one of the cleanest
+ways to keep your editor sharp: stable global defaults, local project power,
+and no permanent clutter.

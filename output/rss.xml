@@ -5,7 +5,14 @@
     <link>https://example.com</link>
     <description>Posts from Plain Text Blog</description>
     <language>en-us</language>
-    <lastBuildDate>Tue, 01 Apr 2025 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 17 Feb 2026 00:00:00 +0000</lastBuildDate>
+    <item>
+      <title>local-vimrc-exrc-nosecure</title>
+      <link>https://example.com/local-vimrc-exrc-nosecure.html</link>
+      <guid>https://example.com/local-vimrc-exrc-nosecure.html</guid>
+      <pubDate>Tue, 17 Feb 2026 00:00:00 +0000</pubDate>
+      <description>LOCAL VIMRC, GLOBAL SANITY There is a quiet engineering problem most Vim users eventually run into: where should project-specific behavior live? If every tweak goes into your global vimrc, it turns into an uncurated junk drawer. If you avoid customization entirely, you lose speed...</description>
+    </item>
     <item>
       <title>barandes-theorem</title>
       <link>https://example.com/barandes-theorem.html</link>
