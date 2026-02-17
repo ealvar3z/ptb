@@ -38,7 +38,7 @@ jobs:
 
       # Step 3: Build the static site
       - name: Build static site
-        run: go run .
+        run: make generate-ci
 
       # Step 4: Upload artifact from the 'output' directory
       - name: Upload artifact
@@ -50,4 +50,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
