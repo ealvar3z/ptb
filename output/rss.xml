@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Plain Text Blog</title>
+    <link>https://example.com</link>
+    <description>Posts from Plain Text Blog</description>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 01 Apr 2025 00:00:00 +0000</lastBuildDate>
+    <item>
+      <title>barandes-theorem</title>
+      <link>https://example.com/barandes-theorem.html</link>
+      <guid>https://example.com/barandes-theorem.html</guid>
+      <pubDate>Tue, 01 Apr 2025 00:00:00 +0000</pubDate>
+      <description>STOCHASTIC-QUANTUM THEOREM. I was listening to the following &lt;a href=&#34;https://youtu.be/3Ms4acb6SUY&#34;&gt;YouTube video&lt;/a&gt; the other day, which led me down an academic rabbit-hole: &lt;a href=&#34;https://arxiv.org/pdf/2309.03085&#34;&gt;Jacob Barandes&#39; Stochastic-Quantum Theorem&lt;/a&gt;. To appreciate...</description>
+    </item>
+    <item>
+      <title>unix-as-an-ide-ii</title>
+      <link>https://example.com/unix-as-an-ide-ii.html</link>
+      <guid>https://example.com/unix-as-an-ide-ii.html</guid>
+      <pubDate>Fri, 14 Mar 2025 00:00:00 +0000</pubDate>
+      <description>UNIX as an IDE II. Last article, I&#39;ve mentioned that I would report back after giving emacs a full rundown to serve as my computing environment. Therefore, this will be a very short blog post for reasons that the reader may be able to foretell. Emacs does stereotypically fulfill ...</description>
+    </item>
+    <item>
+      <title>unix-as-an-ide</title>
+      <link>https://example.com/unix-as-an-ide.html</link>
+      <guid>https://example.com/unix-as-an-ide.html</guid>
+      <pubDate>Mon, 03 Mar 2025 00:00:00 +0000</pubDate>
+      <description>UNIX as an IDE. This title is a little bit misleading, as it is more about configuration and dotfiles hell more than anything else. To get a sense for the title of this post, I rather refer you to the article that inspired me to stay on the &#34;path&#34; &lt;https://blog.sanctum.geek.nz/se...</description>
+    </item>
+    <item>
+      <title>lisp-ii</title>
+      <link>https://example.com/lisp-ii.html</link>
+      <guid>https://example.com/lisp-ii.html</guid>
+      <pubDate>Sat, 22 Feb 2025 00:00:00 +0000</pubDate>
+      <description>LISP (PART 2). In my last post, I left your with a thought experiment: how do Lisp, C and Fortran embody the UNIX philosophy, but in different dimensions? If you&#39;ve been pondering this, let me help you. At its core, the UNIX philosophy can be steeped down to: * do one thing well....</description>
+    </item>
+    <item>
+      <title>lisp</title>
+      <link>https://example.com/lisp.html</link>
+      <guid>https://example.com/lisp.html</guid>
+      <pubDate>Sun, 09 Feb 2025 00:00:00 +0000</pubDate>
+      <description>LISP. For as long as I can remember, there has always been a quiet tension between the UNIX way and the monolithic style inherent to Lisp. The GNU system embodies this monolith within a UNIX-like environment. This isn’t a revelation, for the name itself recursively spells it ou...</description>
+    </item>
+    <item>
+      <title>hackers-bbop</title>
+      <link>https://example.com/hackers-bbop.html</link>
+      <guid>https://example.com/hackers-bbop.html</guid>
+      <pubDate>Mon, 13 Jan 2025 00:00:00 +0000</pubDate>
+      <description>HACKER BEBOP. they say that jazz is a broad term, in that same token, i ask you the following dear reader: what would be the equivalent of a gumbo for technical terms? ... ok you&#39;re done. here is the answer: phreaking. don&#39;t believe me? think about the level of depth and implicit...</description>
+    </item>
+    <item>
+      <title>hello</title>
+      <link>https://example.com/hello.html</link>
+      <guid>https://example.com/hello.html</guid>
+      <pubDate>Mon, 30 Dec 2024 00:00:00 +0000</pubDate>
+      <description>HELLO, READERS. i am here, in a world spun too fast, where old shall be new, and the thoughts do not wait, and the nights do not forget. this is not a manifesto, sermon or innuendo. this is my place. a place for the overlooked, the ones tired of bloat, fast-movers &amp; experiencing ...</description>
+    </item>
+  </channel>
+</rss>

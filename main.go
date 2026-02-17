@@ -24,13 +24,6 @@ var tmpl = template.Must(
 		ParseFS(templateFS, "templates/*.html"),
 )
 
-type BlogPost struct {
-	Filename  string
-	Title     string
-	Timestamp time.Time
-	Content   string
-}
-
 func main() {
 	inputDir := "./txt"
 	outputDir := "./output"
@@ -41,6 +34,7 @@ func main() {
 		return posts[i].Timestamp.After(posts[j].Timestamp)
 	})
 	writeIndex(outputDir, posts)
+	writeRSS(outputDir, posts, defaultRSSConfig())
 	fmt.Println("Site generation complete!")
 }
 
