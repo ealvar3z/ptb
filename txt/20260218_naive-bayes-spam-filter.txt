@@ -3,14 +3,14 @@ WHITE PAPER NOTES
 
 [ reference ]
 -------------
- <a href="https://www.ceas.cc/2008/papers/askomo.pdf">Adaptive Spam Filtering Using
-Only Naive Bayes Text Classifiers (CEAS 2008 PDF)</a>
+<a href="https://www.ceas.cc/2008/papers/askomo.pdf">Adaptive Spam Filtering
+Using Only Naive Bayes Text Classifiers (CEAS 2008 PDF)</a>
 
 
 [ abstract ] 
 ------------ 
 Core claim: plain Naive Bayes text classifiers are still competitive for spam
-filtering when they are engineered carefully. The paper  is not trying to sell a
+filtering when they are engineered carefully. The paper is not trying to sell a
 fancy model; it is showing how far simple probabilistic text classification can
 go with good feature selection and adaptive updates.
 
