@@ -1,0 +1,201 @@
+WHITE PAPER NOTES
+
+
+[ reference ]
+-------------
+ <a href="https://www.ceas.cc/2008/papers/askomo.pdf">Adaptive Spam Filtering Using
+Only Naive Bayes Text Classifiers (CEAS 2008 PDF)</a>
+
+
+[ abstract ] 
+------------ 
+Core claim: plain Naive Bayes text classifiers are still competitive for spam
+filtering when they are engineered carefully. The paper  is not trying to sell a
+fancy model; it is showing how far simple probabilistic text classification can
+go with good feature selection and adaptive updates.
+
+Two variants are emphasized:
+- multinomial NB with transformed term-frequency weights (tf-nb)
+- multinomial NB with Boolean features (bool-nb)
+
+The practical angle is important: computationally cheap methods that can run
+online and adapt during live traffic.
+
+
+[ intro ]
+---------
+Reading note: the authors frame this as a realism test, not a novelty contest.
+They compare text-only NB filters against more complex systems likely to appear
+in challenge settings. The underlying question is:
+
+```text
+How much performance comes from a disciplined text classifier alone,
+before adding all the extra production heuristics?
+```
+
+The paper positions NB as useful because it is:
+- fast at inference
+- easy to retrain
+- cheap enough for frequent updates
+
+
+[ feature selection ]
+---------------------
+This section does most of the heavy lifting.
+
+Pipeline used in the paper:
+1) Use only subject + body text.
+2) Remove HTML tags.
+3) No stemming, no stop-word removal.
+4) Drop tokens that appear in fewer than 5 training messages.
+5) Compute Information Gain on Boolean token presence.
+6) Keep top 3000 tokens.
+
+Notebook interpretation:
+- Step 4 removes brittle noise.
+- Steps 5-6 force a fixed, high-signal feature budget.
+- The model quality depends as much on this selection policy as on NB itself.
+
+ASCII intuition for Information Gain:
+
+```text
+IG(token) ~ how much uncertainty about class drops
+            when we know whether token is present
+
+high IG: token presence strongly shifts spam/ham odds
+low  IG: token presence tells us almost nothing
+```
+
+
+[ naive bayes variants used ]
+-----------------------------
+The scoring target is the spam posterior:
+
+```text
+score = P(spam | x)
+      = [P(spam) * P(x | spam)]
+        / ([P(spam)*P(x|spam)] + [P(ham)*P(x|ham)])
+```
+
+Decision rule in the paper:
+
+```text
+if score > 0.5 => spam
+else           => ham
+```
+
+In implementation, work in log space:
+
+```text
+log P(x|c) becomes sum(...) instead of product(...)
+```
+
+---
+Variant A: bool-nb
+---
+Feature value is binary:
+
+```text
+x_i = 1 if token i appears in message, else 0
+```
+
+Token likelihood estimate in class c:
+
+```text
+p(token|c) = (1 + M_token,c) / (2 + M_c)
+```
+
+where:
+- `M_token,c` = # class-c training messages containing token
+- `M_c`       = total # class-c training messages
+
+Reading note: this is very stable under noisy frequency spikes because repeated
+occurrences in one email do not inflate evidence.
+
+---
+Variant B: tf-nb
+---
+Starts from raw token counts, then applies three transforms:
+
+```text
+a) tf transform:          x <- log(tf + 1)
+b) idf transform:         x <- x * log(total_docs / docs_with_token)
+c) length normalization:  x <- x / ||x||
+```
+
+Then multinomial-style likelihood with smoothing:
+
+```text
+p(token|c) = (1 + N_token,c) / (m + N_c)
+```
+
+where:
+- `N_token,c` = total occurrences of token in class-c messages
+- `N_c`       = total token occurrences in class c (across selected features)
+- `m`         = number of selected features (3000)
+
+Reading note: tf-nb usually wins in their prior experiments, likely because it
+preserves graded evidence while still damping raw count explosions.
+
+
+[ active learning ]
+-------------------
+Operational setup: labels for incoming mail are limited. The filter must decide
+which messages are worth spending label budget on.
+
+Policy used:
+- uncertain messages (scores near 0.5) are more likely to be selected
+- very confident messages are less likely
+- selection is probabilistic, not deterministic
+
+Why probabilistic selection matters:
+
+```text
+pure "pick-most-uncertain-only" can over-focus on one region
+randomized weighting around 0.5 keeps exploration alive
+```
+
+They tune the uncertainty spread using the allowed label ratio:
+
+```text
+K = training_requests_allowed / incoming_messages_to_classify
+```
+
+Then they keep re-estimating spread during the stream, so the selection policy
+tracks the score distribution as the environment shifts.
+
+
+[ conclusion and future work ]
+------------------------------
+Main takeaway from these notes:
+
+```text
+Simple classifier + disciplined feature pipeline + adaptive labeling
+beats many "looks-advanced" setups in constrained, online settings.
+```
+
+For future transfer, a tactical non-cyber domain:
+
+Dynamic quality triage on a manufacturing line.
+
+Mapping:
+
+```text
+Email spam filtering                Manufacturing triage
+--------------------                --------------------
+message                             produced unit / part
+spam vs ham                         fail-risk vs pass-risk
+tokens/features                     sensor/event features
+score near 0.5                      uncertain quality verdict
+label budget                        limited manual inspections
+active learning                     inspect uncertain units first
+```
+
+Why this transfer is plausible:
+- same structure: high-volume stream + limited human verification
+- same objective: maximize value of each manual label
+- same method: keep a lightweight probabilistic model that updates often
+
+[ P.S ]
+-------
+Code implementation can be found <a href="https://github.com/ealvar3z/spam_whitepaper">here</a>
