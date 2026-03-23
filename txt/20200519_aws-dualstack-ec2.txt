@@ -1,0 +1,393 @@
+AWS DUALSTACK EC2.
+
+CLI-only notes. Updated 2026-03-23.
+
+
+[ variables ]
+-------------
+```sh
+export REGION="${REGION:-us-east-1}"
+export TAG="dualstack"
+export VPC_CIDR="10.10.0.0/24"
+export SUBNET_CIDR_V4="10.10.0.0/26"
+export AZ="$(aws ec2 describe-availability-zones \
+        --region "${REGION}" \
+        --filters Name=state,Values=available \
+        --query 'AvailabilityZones[0].ZoneName' \
+        --output text)"
+```
+
+
+[ dualstack vpc ]
+-----------------
+```sh
+export VPCID="$(aws ec2 create-vpc \
+        --region "${REGION}" \
+        --cidr-block "${VPC_CIDR}" \
+        --amazon-provided-ipv6-cidr-block \
+        --query 'Vpc.VpcId' \
+        --output text)"
+
+aws ec2 create-tags \
+        --region "${REGION}" \
+        --resources "${VPCID}" \
+        --tags Key=Name,Value="${TAG}"
+
+aws ec2 modify-vpc-attribute \
+        --region "${REGION}" \
+        --vpc-id "${VPCID}" \
+        --enable-dns-support '{"Value":true}'
+
+aws ec2 modify-vpc-attribute \
+        --region "${REGION}" \
+        --vpc-id "${VPCID}" \
+        --enable-dns-hostnames '{"Value":true}'
+```
+
+
+[ internet gateway ]
+--------------------
+```sh
+export IGW="$(aws ec2 create-internet-gateway \
+        --region "${REGION}" \
+        --query 'InternetGateway.InternetGatewayId' \
+        --output text)"
+
+aws ec2 create-tags \
+        --region "${REGION}" \
+        --resources "${IGW}" \
+        --tags Key=Name,Value="${TAG}"
+
+aws ec2 attach-internet-gateway \
+        --region "${REGION}" \
+        --vpc-id "${VPCID}" \
+        --internet-gateway-id "${IGW}"
+```
+
+
+[ subnet ]
+----------
+```sh
+export V6CIDR="$(aws ec2 describe-vpcs \
+        --region "${REGION}" \
+        --vpc-ids "${VPCID}" \
+        --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' \
+        --output text)"
+
+export SUBNET_CIDR_V6="${V6CIDR%/56}/64"
+
+export SUBNET="$(aws ec2 create-subnet \
+        --region "${REGION}" \
+        --vpc-id "${VPCID}" \
+        --cidr-block "${SUBNET_CIDR_V4}" \
+        --ipv6-cidr-block "${SUBNET_CIDR_V6}" \
+        --availability-zone "${AZ}" \
+        --query 'Subnet.SubnetId' \
+        --output text)"
+
+aws ec2 create-tags \
+        --region "${REGION}" \
+        --resources "${SUBNET}" \
+        --tags Key=Name,Value="${TAG}"
+
+aws ec2 modify-subnet-attribute \
+        --region "${REGION}" \
+        --subnet-id "${SUBNET}" \
+        --assign-ipv6-address-on-creation
+
+aws ec2 modify-subnet-attribute \
+        --region "${REGION}" \
+        --subnet-id "${SUBNET}" \
+        --map-public-ip-on-launch
+```
+
+
+[ route table ]
+---------------
+```sh
+export RTB="$(aws ec2 create-route-table \
+        --region "${REGION}" \
+        --vpc-id "${VPCID}" \
+        --query 'RouteTable.RouteTableId' \
+        --output text)"
+
+aws ec2 create-tags \
+        --region "${REGION}" \
+        --resources "${RTB}" \
+        --tags Key=Name,Value="${TAG}"
+
+aws ec2 associate-route-table \
+        --region "${REGION}" \
+        --route-table-id "${RTB}" \
+        --subnet-id "${SUBNET}" \
+        --query 'AssociationId' \
+        --output text
+
+aws ec2 create-route \
+        --region "${REGION}" \
+        --route-table-id "${RTB}" \
+        --destination-cidr-block 0.0.0.0/0 \
+        --gateway-id "${IGW}"
+
+aws ec2 create-route \
+        --region "${REGION}" \
+        --route-table-id "${RTB}" \
+        --destination-ipv6-cidr-block ::/0 \
+        --gateway-id "${IGW}"
+```
+
+
+[ security group ]
+------------------
+```sh
+export SG="$(aws ec2 create-security-group \
+        --region "${REGION}" \
+        --group-name "${TAG}" \
+        --description "Default security group for ${TAG} instances" \
+        --vpc-id "${VPCID}" \
+        --query 'GroupId' \
+        --output text)"
+
+aws ec2 create-tags \
+        --region "${REGION}" \
+        --resources "${SG}" \
+        --tags Key=Name,Value="${TAG}"
+
+aws ec2 authorize-security-group-ingress \
+        --region "${REGION}" \
+        --group-id "${SG}" \
+        --ip-permissions \
+        '[{"IpProtocol":"-1","IpRanges":[{"CidrIp":"0.0.0.0/0"}],"Ipv6Ranges":[{"CidrIpv6":"::/0"}]}]'
+```
+
+
+[ launch ]
+----------
+```sh
+export AMI="resolve:ssm:/aws/service/ami-amazon-linux-latest/\
+al2023-ami-kernel-default-x86_64"
+
+export INSTANCE_ID="$(aws ec2 run-instances \
+        --region "${REGION}" \
+        --image-id "${AMI}" \
+        --instance-type t3.micro \
+        --count 1 \
+        --security-group-ids "${SG}" \
+        --subnet-id "${SUBNET}" \
+        --query 'Instances[0].InstanceId' \
+        --output text)"
+
+aws ec2 wait instance-running \
+        --region "${REGION}" \
+        --instance-ids "${INSTANCE_ID}"
+
+export PUBLIC_DNS="$(aws ec2 describe-instances \
+        --region "${REGION}" \
+        --instance-ids "${INSTANCE_ID}" \
+        --query 'Reservations[0].Instances[0].PublicDnsName' \
+        --output text)"
+
+export PUBLIC_IPV4="$(aws ec2 describe-instances \
+        --region "${REGION}" \
+        --instance-ids "${INSTANCE_ID}" \
+        --query 'Reservations[0].Instances[0].PublicIpAddress' \
+        --output text)"
+
+export PUBLIC_IPV6="$(aws ec2 describe-instances \
+        --region "${REGION}" \
+        --instance-ids "${INSTANCE_ID}" \
+        --query 'Reservations[0].Instances[0].NetworkInterfaces[0].Ipv6Addresses[0].Ipv6Address' \
+        --output text)"
+
+printf '%s %s %s\n' "${PUBLIC_DNS}" "${PUBLIC_IPV4}" "${PUBLIC_IPV6}"
+
+ping -6 -c 3 "${PUBLIC_IPV6}"
+ssh ec2-user@"${PUBLIC_DNS}" 'ip addr show dev eth0'
+```
+
+
+[ one-shot script ]
+-------------------
+```sh
+cat > ~/bin/create-dualstack-vpc <<'EOF'
+#!/bin/sh
+
+set -eu
+
+REGION="${1:-${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}}"
+TAG="${TAG:-dualstack}"
+VPC_CIDR="${VPC_CIDR:-10.10.0.0/24}"
+SUBNET_CIDR_V4="${SUBNET_CIDR_V4:-10.10.0.0/26}"
+
+AZ="$(aws ec2 describe-availability-zones \
+        --region "${REGION}" \
+        --filters Name=state,Values=available \
+        --query 'AvailabilityZones[0].ZoneName' \
+        --output text)"
+
+VPCID="$(aws ec2 create-vpc \
+        --region "${REGION}" \
+        --cidr-block "${VPC_CIDR}" \
+        --amazon-provided-ipv6-cidr-block \
+        --query 'Vpc.VpcId' \
+        --output text)"
+aws ec2 create-tags \
+        --region "${REGION}" \
+        --resources "${VPCID}" \
+        --tags Key=Name,Value="${TAG}"
+aws ec2 modify-vpc-attribute \
+        --region "${REGION}" \
+        --vpc-id "${VPCID}" \
+        --enable-dns-support '{"Value":true}'
+aws ec2 modify-vpc-attribute \
+        --region "${REGION}" \
+        --vpc-id "${VPCID}" \
+        --enable-dns-hostnames '{"Value":true}'
+
+IGW="$(aws ec2 create-internet-gateway \
+        --region "${REGION}" \
+        --query 'InternetGateway.InternetGatewayId' \
+        --output text)"
+aws ec2 create-tags \
+        --region "${REGION}" \
+        --resources "${IGW}" \
+        --tags Key=Name,Value="${TAG}"
+aws ec2 attach-internet-gateway \
+        --region "${REGION}" \
+        --vpc-id "${VPCID}" \
+        --internet-gateway-id "${IGW}"
+
+V6CIDR="$(aws ec2 describe-vpcs \
+        --region "${REGION}" \
+        --vpc-ids "${VPCID}" \
+        --query 'Vpcs[0].Ipv6CidrBlockAssociationSet[0].Ipv6CidrBlock' \
+        --output text)"
+SUBNET_CIDR_V6="${V6CIDR%/56}/64"
+SUBNET="$(aws ec2 create-subnet \
+        --region "${REGION}" \
+        --vpc-id "${VPCID}" \
+        --cidr-block "${SUBNET_CIDR_V4}" \
+        --ipv6-cidr-block "${SUBNET_CIDR_V6}" \
+        --availability-zone "${AZ}" \
+        --query 'Subnet.SubnetId' \
+        --output text)"
+aws ec2 create-tags \
+        --region "${REGION}" \
+        --resources "${SUBNET}" \
+        --tags Key=Name,Value="${TAG}"
+aws ec2 modify-subnet-attribute \
+        --region "${REGION}" \
+        --subnet-id "${SUBNET}" \
+        --assign-ipv6-address-on-creation
+aws ec2 modify-subnet-attribute \
+        --region "${REGION}" \
+        --subnet-id "${SUBNET}" \
+        --map-public-ip-on-launch
+
+RTB="$(aws ec2 create-route-table \
+        --region "${REGION}" \
+        --vpc-id "${VPCID}" \
+        --query 'RouteTable.RouteTableId' \
+        --output text)"
+aws ec2 create-tags \
+        --region "${REGION}" \
+        --resources "${RTB}" \
+        --tags Key=Name,Value="${TAG}"
+aws ec2 associate-route-table \
+        --region "${REGION}" \
+        --route-table-id "${RTB}" \
+        --subnet-id "${SUBNET}" \
+        >/dev/null
+aws ec2 create-route \
+        --region "${REGION}" \
+        --route-table-id "${RTB}" \
+        --destination-cidr-block 0.0.0.0/0 \
+        --gateway-id "${IGW}" \
+        >/dev/null
+aws ec2 create-route \
+        --region "${REGION}" \
+        --route-table-id "${RTB}" \
+        --destination-ipv6-cidr-block ::/0 \
+        --gateway-id "${IGW}" \
+        >/dev/null
+
+SG="$(aws ec2 create-security-group \
+        --region "${REGION}" \
+        --group-name "${TAG}" \
+        --description "Default security group for ${TAG} instances" \
+        --vpc-id "${VPCID}" \
+        --query 'GroupId' \
+        --output text)"
+aws ec2 create-tags \
+        --region "${REGION}" \
+        --resources "${SG}" \
+        --tags Key=Name,Value="${TAG}"
+aws ec2 authorize-security-group-ingress \
+        --region "${REGION}" \
+        --group-id "${SG}" \
+        --ip-permissions \
+        '[{"IpProtocol":"-1","IpRanges":[{"CidrIp":"0.0.0.0/0"}],"Ipv6Ranges":[{"CidrIpv6":"::/0"}]}]'
+
+printf 'region=%s vpc=%s subnet=%s sg=%s\n' \
+        "${REGION}" "${VPCID}" "${SUBNET}" "${SG}"
+EOF
+
+chmod 755 ~/bin/create-dualstack-vpc
+```
+
+
+[ launch helper ]
+-----------------
+```sh
+cat >> ~/.bashrc <<'EOF'
+start_dualstack_instance() {
+        region="${1:?region required}"
+        shift
+
+        subnet="$(aws ec2 describe-subnets \
+                --region "${region}" \
+                --filters Name=tag:Name,Values=dualstack \
+                --query 'Subnets[0].SubnetId' \
+                --output text)"
+
+        sg="$(aws ec2 describe-security-groups \
+                --region "${region}" \
+                --filters Name=tag:Name,Values=dualstack \
+                --query 'SecurityGroups[0].GroupId' \
+                --output text)"
+
+        aws ec2 run-instances \
+                --region "${region}" \
+                --subnet-id "${subnet}" \
+                --security-group-ids "${sg}" \
+                "$@"
+}
+
+alias start-al2023-use1='start_dualstack_instance us-east-1 \
+        --image-id resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 \
+        --instance-type t3.micro'
+EOF
+```
+
+
+[ multi-region ]
+----------------
+```sh
+aws configure set region sa-east-1
+~/bin/create-dualstack-vpc sa-east-1
+
+aws configure set region us-east-1
+~/bin/create-dualstack-vpc us-east-1
+
+start_dualstack_instance sa-east-1 \
+        --image-id resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 \
+        --instance-type t3.micro \
+        --query 'Instances[0].InstanceId' \
+        --output text
+
+start_dualstack_instance us-east-1 \
+        --image-id resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 \
+        --instance-type t3.micro \
+        --query 'Instances[0].InstanceId' \
+        --output text
+```
