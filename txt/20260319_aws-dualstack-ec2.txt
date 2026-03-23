@@ -1,6 +1,6 @@
 AWS DUALSTACK EC2.
 
-CLI-only notes. Updated 2026-03-23.
+CLI-only workflow. Updated 2026-03-23.
 
 
 [ variables ]
