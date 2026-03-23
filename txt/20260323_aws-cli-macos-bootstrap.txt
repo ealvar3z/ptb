@@ -1,0 +1,368 @@
+AWS CLI MACOS BOOTSTRAP.
+
+New Mac. Empty shell. Need AWS from the command line.
+
+This is the shortest path I trust:
+
+- install AWS CLI v2 from AWS
+- configure one named profile
+- generate an SSH key locally
+- import only the public key into EC2
+- launch one small Linux instance
+- connect to it
+- tear it all back down when done
+
+The commands below assume a fresh macOS 11+ machine, a POSIX shell, and an AWS
+account where somebody has already granted you enough permissions to use EC2.
+
+If your org uses IAM Identity Center, use that. If it does not, use a named
+access-key profile instead. Do not use the root account.
+
+
+[ install aws cli v2 ]
+----------------------
+AWS documents the official macOS package installer. This keeps us on the AWS
+distribution instead of a third-party tap.
+
+```sh
+cd /tmp
+curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
+sudo installer -pkg AWSCLIV2.pkg -target /
+
+aws --version
+which aws
+```
+
+If `aws --version` still shows CLI v1, remove that from your `PATH` or migrate
+it out of the way before continuing.
+
+
+[ recommended auth ]
+--------------------
+If your org uses IAM Identity Center, this is the preferred setup.
+
+```sh
+aws configure sso --profile work
+aws sso login --profile work
+
+AWS_PROFILE=work aws sts get-caller-identity \
+        --query 'Arn' \
+        --output text
+```
+
+This writes profile data to `~/.aws/config` and caches temporary credentials
+locally after login.
+
+
+[ fallback auth ]
+-----------------
+If you were issued long-lived access keys instead, keep them in a named
+profile, not in `default`.
+
+```sh
+aws configure set profile.lab.aws_access_key_id AKIA...
+aws configure set profile.lab.aws_secret_access_key your-secret-key
+aws configure set profile.lab.region us-east-1
+aws configure set profile.lab.output json
+
+AWS_PROFILE=lab aws sts get-caller-identity \
+        --query 'Arn' \
+        --output text
+```
+
+
+[ pick one profile ]
+--------------------
+For the rest of this note I will call the working profile `lab`.
+
+```sh
+export AWS_PROFILE=lab
+export AWS_REGION=us-east-1
+```
+
+If you used SSO, replace `lab` with your SSO profile name.
+
+
+[ optional least-privilege policy ]
+-----------------------------------
+Intentionally narrow: enough to discover the default VPC/subnet, manage
+one SSH security group, import a key, launch an instance, inspect it,
+and terminate it later.
+
+```sh
+cat > ec2-bootstrap-min.json <<'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:ImportKeyPair",
+        "ec2:DeleteKeyPair",
+        "ec2:CreateSecurityGroup",
+        "ec2:DeleteSecurityGroup",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:RunInstances",
+        "ec2:TerminateInstances",
+        "ec2:CreateTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters"
+      ],
+      "Resource": "arn:aws:ssm:*::parameter/aws/service/*"
+    }
+  ]
+}
+EOF
+```
+
+If you already have broader EC2 access, you do not need this file.
+
+
+[ local ssh key ]
+-----------------
+Keep the private key on the Mac. Import the public key to EC2. That way AWS
+never hands your private key back to you, and you do not have to rescue it from
+CLI output later.
+
+```sh
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+
+ssh-keygen -t ed25519 -a 64 -f ~/.ssh/aws-lab -C "aws-lab-$(hostname)-$(date +%F)"
+chmod 600 ~/.ssh/aws-lab
+chmod 644 ~/.ssh/aws-lab.pub
+
+aws ec2 import-key-pair \
+        --region "${AWS_REGION}" \
+        --key-name aws-lab \
+        --public-key-material fileb://~/.ssh/aws-lab.pub \
+        --query 'KeyFingerprint' \
+        --output text
+```
+
+For Linux instances, ED25519 is fine. If you need Windows instance support,
+switch to RSA.
+
+
+[ ssh agent ]
+-------------
+Optional, but useful on macOS.
+
+```sh
+eval "$(ssh-agent -s)"
+ssh-add --apple-use-keychain ~/.ssh/aws-lab
+```
+
+
+[ default network lookup ]
+--------------------------
+Use the default VPC and one default subnet unless you have a reason to launch
+into a custom VPC (see my previous blog post).
+
+```sh
+export VPC_ID="$(aws ec2 describe-vpcs \
+        --region "${AWS_REGION}" \
+        --filters Name=is-default,Values=true \
+        --query 'Vpcs[0].VpcId' \
+        --output text)"
+
+export SUBNET_ID="$(aws ec2 describe-subnets \
+        --region "${AWS_REGION}" \
+        --filters Name=default-for-az,Values=true Name=vpc-id,Values="${VPC_ID}" \
+        --query 'Subnets[0].SubnetId' \
+        --output text)"
+
+printf 'vpc=%s subnet=%s\n' "${VPC_ID}" "${SUBNET_ID}"
+```
+
+
+[ security group ]
+------------------
+Restrict SSH to your current public IP instead of opening `0.0.0.0/0`.
+
+```sh
+export MY_IP="$(curl -fsSL https://checkip.amazonaws.com)"
+cat > sg-ssh.json <<EOF
+[
+  {
+    "IpProtocol": "tcp",
+    "FromPort": 22,
+    "ToPort": 22,
+    "IpRanges": [
+      {
+        "CidrIp": "${MY_IP}/32",
+        "Description": "macOS bootstrap host"
+      }
+    ]
+  }
+]
+EOF
+
+export SG_ID="$(aws ec2 create-security-group \
+        --region "${AWS_REGION}" \
+        --group-name aws-lab-ssh \
+        --description 'SSH access for CLI bootstrap' \
+        --vpc-id "${VPC_ID}" \
+        --query 'GroupId' \
+        --output text)"
+
+aws ec2 create-tags \
+        --region "${AWS_REGION}" \
+        --resources "${SG_ID}" \
+        --tags Key=Name,Value=aws-lab-ssh
+
+aws ec2 authorize-security-group-ingress \
+        --region "${AWS_REGION}" \
+        --group-id "${SG_ID}" \
+        --ip-permissions file://sg-ssh.json
+```
+
+
+[ latest ami ]
+--------------
+Use the public SSM parameter so the image stays current without hardcoding an
+AMI ID.
+
+```sh
+export AMI_ID="$(aws ssm get-parameter \
+        --region "${AWS_REGION}" \
+        --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 \
+        --query 'Parameter.Value' \
+        --output text)"
+
+printf 'ami=%s\n' "${AMI_ID}"
+```
+
+If you want Graviton instead, switch to
+`/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64` and use
+an ARM instance type.
+
+
+[ launch ]
+----------
+```sh
+export INSTANCE_ID="$(aws ec2 run-instances \
+        --region "${AWS_REGION}" \
+        --image-id "${AMI_ID}" \
+        --instance-type t3.micro \
+        --key-name aws-lab \
+        --security-group-ids "${SG_ID}" \
+        --subnet-id "${SUBNET_ID}" \
+        --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=aws-lab}]' \
+        --query 'Instances[0].InstanceId' \
+        --output text)"
+
+aws ec2 wait instance-running \
+        --region "${AWS_REGION}" \
+        --instance-ids "${INSTANCE_ID}"
+
+export PUBLIC_DNS="$(aws ec2 describe-instances \
+        --region "${AWS_REGION}" \
+        --instance-ids "${INSTANCE_ID}" \
+        --query 'Reservations[0].Instances[0].PublicDnsName' \
+        --output text)"
+
+export PUBLIC_IP="$(aws ec2 describe-instances \
+        --region "${AWS_REGION}" \
+        --instance-ids "${INSTANCE_ID}" \
+        --query 'Reservations[0].Instances[0].PublicIpAddress' \
+        --output text)"
+
+printf 'instance=%s dns=%s ip=%s\n' "${INSTANCE_ID}" "${PUBLIC_DNS}" "${PUBLIC_IP}"
+```
+
+
+[ first ssh ]
+-------------
+Amazon Linux 2023 uses `ec2-user`.
+
+```sh
+ssh -i ~/.ssh/aws-lab ec2-user@"${PUBLIC_DNS}"
+```
+
+If you want a host alias:
+
+```sh
+cat >> ~/.ssh/config <<EOF
+Host aws-lab
+        HostName ${PUBLIC_DNS}
+        User ec2-user
+        IdentityFile ~/.ssh/aws-lab
+        IdentitiesOnly yes
+EOF
+
+chmod 600 ~/.ssh/config
+ssh aws-lab
+```
+
+
+[ quick checks ]
+----------------
+```sh
+aws ec2 describe-instances \
+        --region "${AWS_REGION}" \
+        --instance-ids "${INSTANCE_ID}" \
+        --query 'Reservations[0].Instances[0].[State.Name,InstanceType,PublicDnsName]' \
+        --output text
+
+ssh -i ~/.ssh/aws-lab ec2-user@"${PUBLIC_DNS}" 'uname -a'
+ssh -i ~/.ssh/aws-lab ec2-user@"${PUBLIC_DNS}" 'id'
+```
+
+
+[ teardown ]
+------------
+Do this when you are done. Instances cost money while they are running.
+
+```sh
+aws ec2 terminate-instances \
+        --region "${AWS_REGION}" \
+        --instance-ids "${INSTANCE_ID}" \
+        --query 'TerminatingInstances[0].CurrentState.Name' \
+        --output text
+
+aws ec2 wait instance-terminated \
+        --region "${AWS_REGION}" \
+        --instance-ids "${INSTANCE_ID}"
+
+aws ec2 delete-security-group \
+        --region "${AWS_REGION}" \
+        --group-id "${SG_ID}"
+
+aws ec2 delete-key-pair \
+        --region "${AWS_REGION}" \
+        --key-name aws-lab
+```
+
+Deleting the EC2 key pair in AWS does not delete your local private key. Remove
+`~/.ssh/aws-lab` and `~/.ssh/aws-lab.pub` yourself if the Mac was only a
+temporary setup box.
+
+
+[ references ]
+--------------
+<a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html">Installing or updating to the latest version of the AWS CLI</a>
+<a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html">Configuring IAM Identity Center authentication with the AWS CLI</a>
+<a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html">Setting up the AWS CLI</a>
+<a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-keypairs.html">Creating, displaying, and deleting Amazon EC2 key pairs in the AWS CLI</a>
+<a href="https://docs.aws.amazon.com/cli/latest/reference/ec2/import-key-pair.html">import-key-pair</a>
+<a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-services-ec2-sg.html">Creating, configuring, and deleting Amazon EC2 security groups in the AWS CLI</a>
+<a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/finding-an-ami-parameter-store.html">Reference the latest AMIs using Systems Manager public parameters</a>
+<a href="https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-public-parameters-ami.html">Calling AMI public parameters in Parameter Store</a>
+<a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html">Amazon EC2 key pairs and Amazon EC2 instances</a>
