@@ -1,0 +1,265 @@
+AWS IAM AND COST EXPLORER CLI SETUP.
+
+The old version of this note created a permanent IAM admin user and granted a
+wide Cost Explorer policy. That is more access than this job needs.
+
+This version keeps the browser out of the way as much as possible:
+
+- start from an existing administrator-capable CLI profile
+- create one dedicated CLI user with no console password
+- attach only the permissions needed for the commands below
+- keep Cost Explorer on `us-east-1`, where the API lives
+
+If you can use temporary credentials via IAM Identity Center or a role, do
+that. AWS recommends temporary credentials over long-lived IAM user access
+keys. If you still need a simple CLI-only teaching setup, the user below is the
+smallest durable pattern that gets the job done.
+
+One console-only prerequisite remains: Cost Explorer has to be enabled in the
+Billing and Cost Management console first. AWS does not let you enable it via
+the API.
+
+
+[ assumptions ]
+---------------
+```sh
+export BOOTSTRAP_PROFILE="bootstrap-admin"
+export TARGET_USER="cost-reader"
+export COST_REGION="us-east-1"
+```
+
+
+[ minimal cost explorer policy ]
+--------------------------------
+This is enough for the basic current-cost command.
+
+```sh
+cat > cost-explorer-min.json <<'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ce:GetCostAndUsage"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+```
+
+
+[ optional query helpers ]
+--------------------------
+Add these only if you want Cost Explorer filters, tag lookups, or forecasts.
+
+```sh
+cat > cost-explorer-extra.json <<'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ce:GetCostForecast",
+        "ce:GetDimensionValues",
+        "ce:GetTags"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+```
+
+
+[ optional ec2 inventory policy ]
+---------------------------------
+Add this only if you also want the EC2 inventory helper at the end.
+
+```sh
+cat > ec2-inventory-readonly.json <<'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeImages",
+        "ec2:DescribeInstances",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeVolumes"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+```
+
+
+[ create the cli user ]
+-----------------------
+No console password. No IAM admin permissions. No group needed for a single
+user.
+
+```sh
+AWS_PROFILE="${BOOTSTRAP_PROFILE}" aws iam create-user \
+        --user-name "${TARGET_USER}"
+
+AWS_PROFILE="${BOOTSTRAP_PROFILE}" aws iam put-user-policy \
+        --user-name "${TARGET_USER}" \
+        --policy-name cost-explorer-min \
+        --policy-document file://cost-explorer-min.json
+```
+
+Only attach the next policies if you plan to use those features.
+
+```sh
+AWS_PROFILE="${BOOTSTRAP_PROFILE}" aws iam put-user-policy \
+        --user-name "${TARGET_USER}" \
+        --policy-name cost-explorer-extra \
+        --policy-document file://cost-explorer-extra.json
+
+AWS_PROFILE="${BOOTSTRAP_PROFILE}" aws iam put-user-policy \
+        --user-name "${TARGET_USER}" \
+        --policy-name ec2-inventory-readonly \
+        --policy-document file://ec2-inventory-readonly.json
+```
+
+
+[ create and store the access key ]
+-----------------------------------
+AWS only shows the secret once. Configure the profile immediately.
+
+```sh
+read -r ACCESS_KEY_ID SECRET_ACCESS_KEY <<EOF
+$(AWS_PROFILE="${BOOTSTRAP_PROFILE}" aws iam create-access-key \
+        --user-name "${TARGET_USER}" \
+        --query 'AccessKey.[AccessKeyId,SecretAccessKey]' \
+        --output text)
+EOF
+
+aws configure set profile.${TARGET_USER}.aws_access_key_id "${ACCESS_KEY_ID}"
+aws configure set profile.${TARGET_USER}.aws_secret_access_key \
+        "${SECRET_ACCESS_KEY}"
+aws configure set profile.${TARGET_USER}.region "${COST_REGION}"
+aws configure set profile.${TARGET_USER}.output json
+
+unset ACCESS_KEY_ID SECRET_ACCESS_KEY
+```
+
+
+[ verify the profile ]
+----------------------
+```sh
+AWS_PROFILE="${TARGET_USER}" aws sts get-caller-identity \
+        --query 'Arn' \
+        --output text
+```
+
+
+[ current bill ]
+----------------
+Cost Explorer `End` is exclusive, and AWS documents current-period data as
+being available through the previous day.
+
+```sh
+start="$(date -u +%Y-%m-01)"
+label="$(date -u -v-1d +%F 2>/dev/null || date -u -d yesterday +%F)"
+end="$(date -u +%F)"
+
+amount="$(AWS_PROFILE="${TARGET_USER}" aws ce get-cost-and-usage \
+        --region "${COST_REGION}" \
+        --time-period Start="${start}",End="${end}" \
+        --granularity MONTHLY \
+        --metrics UnblendedCost \
+        --query 'ResultsByTime[0].Total.UnblendedCost.Amount' \
+        --output text)"
+
+printf 'AWS month-to-date through %s: $%.2f\n' "${label}" "${amount}"
+```
+
+
+[ optional ec2 inventory ]
+--------------------------
+```sh
+AWS_PROFILE="${TARGET_USER}" aws ec2 describe-images \
+        --owners self \
+        --query 'Images[].{ImageId:ImageId,Snapshot:BlockDeviceMappings[0].Ebs.SnapshotId,Name:Name}' \
+        --output table
+
+AWS_PROFILE="${TARGET_USER}" aws ec2 describe-snapshots \
+        --owner-ids self \
+        --query 'Snapshots[].{SnapshotId:SnapshotId,Started:StartTime}' \
+        --output table
+
+AWS_PROFILE="${TARGET_USER}" aws ec2 describe-instances \
+        --query 'Reservations[].Instances[].{InstanceId:InstanceId,State:State.Name,DNS:PublicDnsName}' \
+        --output table
+
+AWS_PROFILE="${TARGET_USER}" aws ec2 describe-volumes \
+        --query 'Volumes[].{VolumeId:VolumeId,Created:CreateTime,AttachedTo:Attachments[0].InstanceId}' \
+        --output table
+```
+
+
+[ shell helpers ]
+-----------------
+```sh
+cat >> ~/.profile <<'EOF'
+awsCurrentBill() {
+        start="$(date -u +%Y-%m-01)"
+        label="$(date -u -v-1d +%F 2>/dev/null || date -u -d yesterday +%F)"
+        end="$(date -u +%F)"
+
+        amount="$(AWS_PROFILE=cost-reader aws ce get-cost-and-usage \
+                --region us-east-1 \
+                --time-period Start="${start}",End="${end}" \
+                --granularity MONTHLY \
+                --metrics UnblendedCost \
+                --query 'ResultsByTime[0].Total.UnblendedCost.Amount' \
+                --output text)"
+
+        printf 'AWS month-to-date through %s: $%.2f\n' "${label}" "${amount}"
+}
+
+awsListResources() {
+        AWS_PROFILE=cost-reader aws ec2 describe-images \
+                --owners self \
+                --query 'Images[].{ImageId:ImageId,Snapshot:BlockDeviceMappings[0].Ebs.SnapshotId,Name:Name}' \
+                --output table
+
+        AWS_PROFILE=cost-reader aws ec2 describe-snapshots \
+                --owner-ids self \
+                --query 'Snapshots[].{SnapshotId:SnapshotId,Started:StartTime}' \
+                --output table
+
+        AWS_PROFILE=cost-reader aws ec2 describe-instances \
+                --query 'Reservations[].Instances[].{InstanceId:InstanceId,State:State.Name,DNS:PublicDnsName}' \
+                --output table
+
+        AWS_PROFILE=cost-reader aws ec2 describe-volumes \
+                --query 'Volumes[].{VolumeId:VolumeId,Created:CreateTime,AttachedTo:Attachments[0].InstanceId}' \
+                --output table
+}
+EOF
+```
+
+
+[ note ]
+--------
+Cost Explorer API requests are billed at $0.01 per paginated request. Keep
+that in mind before running `awsCurrentBill()` from a login shell or cron job.
+
+[ reference ]
+-------------
+<a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users.html">IAM users</a>
+<a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html">Manage access keys for IAM users</a>
+<a href="https://docs.aws.amazon.com/cost-management/latest/userguide/ce-getting-started.html">Getting started with Cost Explorer</a>
+<a href="https://docs.aws.amazon.com/cost-management/latest/userguide/security_iam_id-based-policy-examples.html">Identity-based policy examples for AWS Cost Management</a>
+<a href="https://docs.aws.amazon.com/aws-cost-management/latest/APIReference/API_DateInterval.html">Cost Explorer DateInterval</a>
+<a href="https://docs.aws.amazon.com/cost-management/latest/userguide/ce-what-is.html">Analyzing your costs and usage with AWS Cost Explorer</a>
+<a href="https://aws.amazon.com/aws-cost-management/aws-cost-explorer/pricing/">AWS Cost Explorer Pricing</a>
