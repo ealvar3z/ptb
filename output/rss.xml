@@ -5,7 +5,35 @@
     <link>https://example.com</link>
     <description>Posts from Plain Text Blog</description>
     <language>en-us</language>
-    <lastBuildDate>Tue, 17 Feb 2026 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 23 Mar 2026 00:00:00 +0000</lastBuildDate>
+    <item>
+      <title>aws-cli-macos-bootstrap</title>
+      <link>https://example.com/aws-cli-macos-bootstrap.html</link>
+      <guid>https://example.com/aws-cli-macos-bootstrap.html</guid>
+      <pubDate>Mon, 23 Mar 2026 00:00:00 +0000</pubDate>
+      <description>AWS CLI MACOS BOOTSTRAP. New Mac. Empty shell. Need AWS from the command line. This is the shortest path I trust: - install AWS CLI v2 from AWS - configure one named profile - generate an SSH key locally - import only the public key into EC2 - launch one small Linux instance - co...</description>
+    </item>
+    <item>
+      <title>aws-dualstack-ec2</title>
+      <link>https://example.com/aws-dualstack-ec2.html</link>
+      <guid>https://example.com/aws-dualstack-ec2.html</guid>
+      <pubDate>Thu, 19 Mar 2026 00:00:00 +0000</pubDate>
+      <description>AWS DUALSTACK EC2. CLI-only workflow. Updated 2026-03-23. [ variables ] ------------- ```sh export REGION=&#34;${REGION:-us-east-1}&#34; export TAG=&#34;dualstack&#34; export VPC_CIDR=&#34;10.10.0.0/24&#34; export SUBNET_CIDR_V4=&#34;10.10.0.0/26&#34; export AZ=&#34;$(aws ec2 describe-availability-zones \ --region ...</description>
+    </item>
+    <item>
+      <title>aws-iam-cost-explorer-cli</title>
+      <link>https://example.com/aws-iam-cost-explorer-cli.html</link>
+      <guid>https://example.com/aws-iam-cost-explorer-cli.html</guid>
+      <pubDate>Fri, 20 Feb 2026 00:00:00 +0000</pubDate>
+      <description>AWS IAM AND COST EXPLORER CLI SETUP. The old version of this note created a permanent IAM admin user and granted a wide Cost Explorer policy. That is more access than this job needs. This version keeps the browser out of the way as much as possible: - start from an existing admin...</description>
+    </item>
+    <item>
+      <title>naive-bayes-spam-filter</title>
+      <link>https://example.com/naive-bayes-spam-filter.html</link>
+      <guid>https://example.com/naive-bayes-spam-filter.html</guid>
+      <pubDate>Wed, 18 Feb 2026 00:00:00 +0000</pubDate>
+      <description>WHITE PAPER NOTES [ reference ] ------------- &lt;a href=&#34;https://www.ceas.cc/2008/papers/askomo.pdf&#34;&gt;Adaptive Spam Filtering Using Only Naive Bayes Text Classifiers (CEAS 2008 PDF)&lt;/a&gt; [ abstract ] ------------ Core claim: plain Naive Bayes text classifiers are still competitive fo...</description>
+    </item>
     <item>
       <title>local-vimrc-exrc-nosecure</title>
       <link>https://example.com/local-vimrc-exrc-nosecure.html</link>
